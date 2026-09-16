@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Досье клиента — подготовка к встрече</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="demo-banner">
+  ДЕМО-ПРОТОТИП. Работает только в этом браузере (данные не покидают устройство и не сохраняются на сервере).
+  Не разворачивался в периметре банка. Не вносите реальные данные клиентов — см. PRD2.md, раздел 10.
+</div>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">Б</span>
+    <div>
+      <div class="brand-title">Досье клиента</div>
+      <div class="brand-subtitle">Подготовка к встрече — только общедоступные источники</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <label class="employee-field">
+      Сотрудник
+      <input type="text" id="employeeName" placeholder="Имя Фамилия" />
+    </label>
+    <button class="btn btn-secondary" id="btnMyCards">Мои карточки</button>
+    <button class="btn btn-secondary" id="btnNewCard">+ Новая карточка</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <section class="panel client-panel">
+    <h2>1. Данные о клиенте</h2>
+    <div class="form-grid">
+      <label>
+        ФИО / Наименование компании
+        <input type="text" id="clientName" placeholder="Например, ТОО «Ромашка» или Иванов Иван Иванович">
+      </label>
+      <label>
+        ИИН
+        <input type="text" id="clientIin" placeholder="12 цифр" inputmode="numeric" maxlength="12">
+      </label>
+      <label>
+        БИН
+        <input type="text" id="clientBin" placeholder="12 цифр" inputmode="numeric" maxlength="12">
+      </label>
+      <label>
+        Дата встречи
+        <input type="date" id="meetingDate">
+      </label>
+      <label class="span-2">
+        Цель встречи / продукт
+        <input type="text" id="meetingGoal" placeholder="Например, кредитная линия, РКО, депозит">
+      </label>
+    </div>
+
+    <div class="type-switch">
+      <span class="type-switch-label">Тип клиента:</span>
+      <label class="radio"><input type="radio" name="clientType" value="legal" checked> Юридическое лицо</label>
+      <label class="radio"><input type="radio" name="clientType" value="individual"> Физическое лицо</label>
+      <label class="radio"><input type="radio" name="clientType" value="both"> Не уверен — показать оба</label>
+    </div>
+  </section>
+
+  <section class="panel checklist-panel">
+    <div class="checklist-panel-header">
+      <h2>2. Чек-лист по открытым источникам</h2>
+      <span class="hint">Чек-лист перестраивается автоматически при смене типа клиента.</span>
+    </div>
+    <div id="checklistContainer"></div>
+  </section>
+
+  <section class="panel export-panel">
+    <h2>3. Выгрузка и сохранение</h2>
+    <p class="hint">Экспорт готовит файл для ручной пересылки по одобренным каналам банка — автоматическая отправка не выполняется.</p>
+    <div class="export-actions">
+      <button class="btn btn-primary" id="btnExportWord">Экспорт в Word (.doc)</button>
+      <button class="btn btn-secondary" id="btnCopySummary">Скопировать сводку в буфер</button>
+      <button class="btn btn-secondary" id="btnSaveCard">Сохранить карточку (локально)</button>
+    </div>
+    <div id="saveStatus" class="save-status" aria-live="polite"></div>
+  </section>
+
+</main>
+
+<div class="modal-backdrop" id="myCardsModal" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Мои карточки</h3>
+      <button class="btn-close" id="btnCloseMyCards" aria-label="Закрыть">×</button>
+    </div>
+    <div id="myCardsList" class="my-cards-list"></div>
+  </div>
+</div>
+
+<script src="checklist-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

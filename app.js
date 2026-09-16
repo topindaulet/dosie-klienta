@@ -451,14 +451,28 @@ function attachEvents() {
 
   document.getElementById('btnNewCard').addEventListener('click', resetForNewCard);
 
-  document.getElementById('btnGenerateChecklist').addEventListener('click', () => {
-    renderChecklist();
-    const panel = document.querySelector('.checklist-panel');
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    panel.classList.remove('highlight');
-    // force reflow so the animation restarts on repeated clicks
-    void panel.offsetWidth;
-    panel.classList.add('highlight');
+  document.getElementById('btnGenerateChecklist').addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    if (btn.disabled) return;
+
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    btn.textContent = 'Формируем чек-лист…';
+
+    setTimeout(() => {
+      renderChecklist();
+      const panel = document.querySelector('.checklist-panel');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      panel.classList.remove('highlight');
+      // force reflow so the animation restarts on repeated clicks
+      void panel.offsetWidth;
+      panel.classList.add('highlight');
+
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+      btn.textContent = originalText;
+    }, 400);
   });
 }
 

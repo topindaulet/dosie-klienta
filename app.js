@@ -450,6 +450,16 @@ function attachEvents() {
   });
 
   document.getElementById('btnNewCard').addEventListener('click', resetForNewCard);
+
+  document.getElementById('btnGenerateChecklist').addEventListener('click', () => {
+    renderChecklist();
+    const panel = document.querySelector('.checklist-panel');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.classList.remove('highlight');
+    // force reflow so the animation restarts on repeated clicks
+    void panel.offsetWidth;
+    panel.classList.add('highlight');
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

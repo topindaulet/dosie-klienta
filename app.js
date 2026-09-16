@@ -8,7 +8,13 @@ const state = {
   clientType: 'legal',
   items: {}, // itemKey -> { found: string, checkedDate: string }
   currentCardId: null,
+  candidates: [], // { id, name, iin, bin, note, sourceUrl }
+  selectedCandidateId: null,
 };
+
+function genCandidateId() {
+  return `cand_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
 
 function itemKey(sectionId, index) {
   return `${sectionId}::${index}`;
@@ -54,7 +60,133 @@ function mainSiteUrl(item) {
   return `https://${item.domains[0]}`;
 }
 
+function updateIncompleteWarning() {
+  const client = getClientFields();
+  const warningEl = document.getElementById('incompleteWarning');
+  if (!warningEl) return;
+
+  const needsId = state.clientType === 'legal' ? !client.bin
+    : state.clientType === 'individual' ? !client.iin
+    : !client.bin && !client.iin;
+
+  const shouldShow = Boolean(client.name) && needsId;
+  warningEl.hidden = !shouldShow;
+}
+
+function renderCandidates() {
+  const listEl = document.getElementById('candidatesList');
+  const emptyHint = document.getElementById('candidatesEmptyHint');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  emptyHint.hidden = state.candidates.length > 0;
+
+  state.candidates.forEach((candidate) => {
+    const row = document.createElement('div');
+    row.className = 'candidate-row' + (state.selectedCandidateId === candidate.id ? ' selected' : '');
+
+    const fields = document.createElement('div');
+    fields.className = 'candidate-row-fields';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'ФИО / наименование найденного варианта';
+    nameInput.value = candidate.name;
+    nameInput.addEventListener('input', () => { candidate.name = nameInput.value; });
+
+    const iinInput = document.createElement('input');
+    iinInput.type = 'text';
+    iinInput.placeholder = 'ИИН (если найден)';
+    iinInput.maxLength = 12;
+    iinInput.value = candidate.iin;
+    iinInput.addEventListener('input', () => { candidate.iin = iinInput.value; });
+
+    const binInput = document.createElement('input');
+    binInput.type = 'text';
+    binInput.placeholder = 'БИН (если найден)';
+    binInput.maxLength = 12;
+    binInput.value = candidate.bin;
+    binInput.addEventListener('input', () => { candidate.bin = binInput.value; });
+
+    fields.appendChild(nameInput);
+    fields.appendChild(iinInput);
+    fields.appendChild(binInput);
+
+    const noteWrap = document.createElement('div');
+    noteWrap.className = 'candidate-row-note';
+    const noteInput = document.createElement('input');
+    noteInput.type = 'text';
+    noteInput.placeholder = 'Отличительный признак: город, сайт, вид деятельности, ссылка на найденную страницу...';
+    noteInput.value = candidate.note;
+    noteInput.addEventListener('input', () => { candidate.note = noteInput.value; });
+    noteWrap.appendChild(noteInput);
+
+    const actions = document.createElement('div');
+    actions.className = 'candidate-row-actions';
+
+    if (state.selectedCandidateId === candidate.id) {
+      const badge = document.createElement('span');
+      badge.className = 'candidate-badge';
+      badge.textContent = '✓ Выбран как клиент';
+      actions.appendChild(badge);
+
+      const unselectBtn = document.createElement('button');
+      unselectBtn.className = 'btn btn-secondary btn-sm';
+      unselectBtn.textContent = 'Отменить выбор';
+      unselectBtn.addEventListener('click', () => {
+        state.selectedCandidateId = null;
+        renderCandidates();
+      });
+      actions.appendChild(unselectBtn);
+    } else {
+      const selectBtn = document.createElement('button');
+      selectBtn.className = 'btn btn-primary btn-sm';
+      selectBtn.textContent = 'Это нужный клиент';
+      selectBtn.addEventListener('click', () => selectCandidate(candidate.id));
+      actions.appendChild(selectBtn);
+    }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-secondary btn-sm';
+    removeBtn.textContent = 'Удалить вариант';
+    removeBtn.addEventListener('click', () => {
+      state.candidates = state.candidates.filter((c) => c.id !== candidate.id);
+      if (state.selectedCandidateId === candidate.id) state.selectedCandidateId = null;
+      renderCandidates();
+    });
+    actions.appendChild(removeBtn);
+
+    row.appendChild(fields);
+    row.appendChild(noteWrap);
+    row.appendChild(actions);
+    listEl.appendChild(row);
+  });
+}
+
+function addCandidate() {
+  state.candidates.push({ id: genCandidateId(), name: '', iin: '', bin: '', note: '' });
+  renderCandidates();
+}
+
+function selectCandidate(id) {
+  const candidate = state.candidates.find((c) => c.id === id);
+  if (!candidate) return;
+
+  document.getElementById('clientName').value = candidate.name;
+  if (candidate.iin) document.getElementById('clientIin').value = candidate.iin;
+  if (candidate.bin) document.getElementById('clientBin').value = candidate.bin;
+
+  state.selectedCandidateId = id;
+  renderCandidates();
+  renderChecklist();
+
+  const statusEl = document.getElementById('saveStatus');
+  statusEl.textContent = `Выбран клиент «${candidate.name}» из ${state.candidates.length} найденных вариантов.`;
+  statusEl.classList.remove('error');
+}
+
 function renderChecklist() {
+  updateIncompleteWarning();
   const container = document.getElementById('checklistContainer');
   container.innerHTML = '';
   const client = getClientFields();
@@ -188,6 +320,17 @@ function buildSummaryText() {
   if (client.meetingDate) lines.push(`Дата встречи: ${client.meetingDate}`);
   if (client.meetingGoal) lines.push(`Цель встречи/продукт: ${client.meetingGoal}`);
   if (client.employee) lines.push(`Подготовил: ${client.employee}`);
+
+  if (state.candidates.length > 0) {
+    lines.push('');
+    lines.push(`Проверка на совпадения: рассмотрено вариантов — ${state.candidates.length}`);
+    state.candidates.forEach((c) => {
+      const isSelected = c.id === state.selectedCandidateId;
+      const idPart = [c.iin && `ИИН ${c.iin}`, c.bin && `БИН ${c.bin}`].filter(Boolean).join(', ');
+      lines.push(`  ${isSelected ? '[ВЫБРАН] ' : '- '}${c.name || '(без имени)'}${idPart ? ` (${idPart})` : ''}${c.note ? ` — ${c.note}` : ''}`);
+    });
+  }
+
   lines.push('');
   if (rows.length === 0) {
     lines.push('По чек-листу пока ничего не внесено.');
@@ -241,6 +384,15 @@ function buildExportHtml() {
     ${client.meetingDate ? `<p><b>Дата встречи:</b> ${esc(client.meetingDate)}</p>` : ''}
     ${client.meetingGoal ? `<p><b>Цель встречи/продукт:</b> ${esc(client.meetingGoal)}</p>` : ''}
     ${client.employee ? `<p><b>Подготовил:</b> ${esc(client.employee)}</p>` : ''}
+    ${state.candidates.length > 0 ? `
+    <p><b>Проверка на совпадения:</b> рассмотрено вариантов — ${state.candidates.length}</p>
+    <ul>
+      ${state.candidates.map((c) => {
+        const isSelected = c.id === state.selectedCandidateId;
+        const idPart = [c.iin && `ИИН ${c.iin}`, c.bin && `БИН ${c.bin}`].filter(Boolean).join(', ');
+        return `<li>${isSelected ? '<b>[ВЫБРАН]</b> ' : ''}${esc(c.name) || '(без имени)'}${idPart ? ` (${esc(idPart)})` : ''}${c.note ? ` — ${esc(c.note)}` : ''}</li>`;
+      }).join('')}
+    </ul>` : ''}
     <hr>
     ${rowsHtml}
     <hr>
@@ -299,6 +451,8 @@ function saveCurrentCard() {
     client,
     clientType: state.clientType,
     items: state.items,
+    candidates: state.candidates,
+    selectedCandidateId: state.selectedCandidateId,
     createdAt: state.currentCardId ? undefined : now,
     updatedAt: now,
     history: [],
@@ -395,8 +549,11 @@ function loadCardIntoForm(card) {
   document.querySelector(`input[name="clientType"][value="${card.clientType}"]`).checked = true;
   state.items = card.items || {};
   state.currentCardId = card.id;
+  state.candidates = card.candidates || [];
+  state.selectedCandidateId = card.selectedCandidateId || null;
 
   renderChecklist();
+  renderCandidates();
   const statusEl = document.getElementById('saveStatus');
   statusEl.textContent = `Загружена карточка «${card.client.name || 'без имени'}».`;
   statusEl.classList.remove('error');
@@ -412,7 +569,10 @@ function resetForNewCard() {
   document.querySelector('input[name="clientType"][value="legal"]').checked = true;
   state.items = {};
   state.currentCardId = null;
+  state.candidates = [];
+  state.selectedCandidateId = null;
   renderChecklist();
+  renderCandidates();
   const statusEl = document.getElementById('saveStatus');
   statusEl.textContent = 'Новая карточка. Заполните данные клиента.';
   statusEl.classList.remove('error');
@@ -451,6 +611,8 @@ function attachEvents() {
 
   document.getElementById('btnNewCard').addEventListener('click', resetForNewCard);
 
+  document.getElementById('btnAddCandidate').addEventListener('click', addCandidate);
+
   document.getElementById('btnGenerateChecklist').addEventListener('click', (e) => {
     const btn = e.currentTarget;
     if (btn.disabled) return;
@@ -479,4 +641,5 @@ function attachEvents() {
 document.addEventListener('DOMContentLoaded', () => {
   attachEvents();
   renderChecklist();
+  renderCandidates();
 });

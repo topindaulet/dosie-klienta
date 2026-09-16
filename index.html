@@ -65,6 +65,23 @@
       <label class="radio"><input type="radio" name="clientType" value="both"> Не уверен — показать оба</label>
     </div>
 
+    <div class="incomplete-warning" id="incompleteWarning" hidden>
+      ⚠ Указано только имя/наименование, без ИИН/БИН — по такому запросу в источниках возможны совпадения с другими клиентами.
+      Откройте источники в чек-листе ниже, и если найдёте несколько подходящих клиентов — добавьте их как варианты и выберите нужного.
+    </div>
+
+    <div class="candidates-block">
+      <div class="candidates-header">
+        <h3>Возможные совпадения (если найдено несколько клиентов)</h3>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnAddCandidate">+ Добавить найденный вариант</button>
+      </div>
+      <p class="hint" id="candidatesEmptyHint">
+        Вариантов пока нет. Инструмент не ищет клиентов сам (см. PRD2.md, раздел 7) — откройте источники по ссылкам
+        в чек-листе, и если найдёте там несколько совпадений, внесите их сюда и выберите нужного.
+      </p>
+      <div id="candidatesList" class="candidates-list"></div>
+    </div>
+
     <button class="btn btn-primary btn-generate" id="btnGenerateChecklist">Сформировать чек-лист ↓</button>
   </section>
 
